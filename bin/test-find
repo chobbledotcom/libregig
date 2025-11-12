@@ -1,0 +1,157 @@
+#!/usr/bin/env ruby
+# Find the first failing test and show details to help fix it
+
+require 'optparse'
+
+# Parse command line options
+options = {}
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: bin/test-find [options] [test_args]"
+
+  opts.separator ""
+  opts.separator "Find the first failing test and show how to fix it"
+  opts.separator ""
+  opts.separator "Examples:"
+  opts.separator "  bin/test-find                      # Run all tests"
+  opts.separator "  bin/test-find test/models/         # Run model tests only"
+  opts.separator "  bin/test-find test/controllers/    # Run controller tests"
+  opts.separator ""
+  opts.separator "Options:"
+
+  opts.on("-h", "--help", "Show this help message") do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+rescue OptionParser::InvalidOption => e
+  # Pass unknown options through to rails test
+  ARGV.unshift(e.args.first)
+end
+
+# Get any additional arguments passed to the script
+additional_args = ARGV.join(' ')
+
+# Build the test command - use fail-fast to stop on first failure
+# Use the rails binstub from the bin directory
+script_dir = File.dirname(__FILE__)
+rails_bin = File.join(script_dir, 'rails')
+test_command = "#{rails_bin} test --fail-fast"
+test_command += " #{additional_args}" unless additional_args.empty?
+
+# Run tests with fail-fast
+puts "⚡ Running tests with fail-fast (stops at first failure)..."
+puts " --- "
+
+# Run the command and capture output
+output = `#{test_command} 2>&1`
+exit_code = $?.exitstatus
+
+# Display the output
+puts output
+
+# Parse the output to extract failure details
+if exit_code == 0
+  puts "\n✅ ALL TESTS PASSED! No failures found."
+
+  if !additional_args.empty?
+    puts ""
+    puts "⚠️  NOTE: You ran tests with specific arguments:"
+    puts "   #{additional_args}"
+    puts ""
+    puts "   There might be failures in other parts of the test suite."
+    puts "   Run 'bin/test-find' without arguments to check all tests."
+  end
+
+  puts " --- "
+  exit 0
+end
+
+# Extract failure information from Minitest output
+# Minitest format: "Error:\nTestClass#test_name:\nErrorClass: error message\n  file:line:in `method'"
+failure_match = output.match(/^(Failure|Error):\n([^#]+)#([^:]+):\n(.+?)\n\s+([^:]+):(\d+):/m)
+
+if failure_match
+  failure_type = failure_match[1]
+  test_class = failure_match[2]
+  test_name = failure_match[3]
+  error_message = failure_match[4].split("\n").first
+  file_path = failure_match[5]
+  line_number = failure_match[6].to_i
+
+  puts "\n❌ #{failure_type.upcase} FOUND:"
+  puts " --- "
+  puts "File: #{file_path}"
+  puts "Line: #{line_number}"
+  puts "Test: #{test_class}##{test_name}"
+  puts "\nError:"
+  puts error_message
+
+  # Try to show the test method
+  if File.exist?(file_path)
+    lines = File.readlines(file_path)
+
+    # Find the test method boundaries
+    start_line = nil
+    end_line = nil
+    indent_level = nil
+
+    # Start from around the failure line and work backwards to find the beginning
+    search_start = [line_number - 1, 0].max
+    search_start.downto(0) do |i|
+      line = lines[i]
+      # Look for test/should blocks
+      if line =~ /^\s*(test|should|context)\s+['"]/ || line =~ /^\s*(test|should)\s+do/
+        start_line = i + 1
+        indent_level = line[/^\s*/].length
+        break
+      end
+    end
+
+    # Find the end of the test
+    if start_line && indent_level
+      lines.each_with_index do |line, i|
+        next if i < start_line
+
+        # Check if we've reached an 'end' at the same or less indent level
+        current_indent = line[/^\s*/].length
+        if line =~ /^\s*end\s*$/ && current_indent <= indent_level
+          end_line = i + 1
+          break
+        end
+      end
+    end
+
+    if start_line && end_line
+      puts "\nTest method (lines #{start_line}-#{end_line}):"
+      puts "-" * 80
+      puts lines[(start_line-1)..(end_line-1)].join
+      puts "-" * 80
+    end
+  end
+
+  puts "\n📝 TO FIX THIS TEST:"
+  puts " --- "
+  puts "1. Run the specific test to see the full error:"
+  puts "   ./bin/test-quick #{file_path}:#{line_number}"
+  puts ""
+  puts "2. Or run the entire test file:"
+  puts "   ./bin/test-quick #{file_path}"
+  puts ""
+  puts "3. Edit the test at #{file_path}:#{start_line || line_number}"
+  puts ""
+  puts "💡 TIPS:"
+  puts "   - Use ./bin/test-quick for fast iteration (no coverage)"
+  puts "   - Use ./bin/test for final check with coverage"
+  puts "   - Check recent changes that might have broken this test"
+  puts " --- "
+else
+  # Couldn't parse the failure, just show we failed
+  puts "\n❌ TESTS FAILED but couldn't parse failure details"
+  puts "Check the output above for error information"
+  puts " --- "
+end
+
+exit exit_code
