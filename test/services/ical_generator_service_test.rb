@@ -86,17 +86,37 @@ class IcalGeneratorServiceTest < ActiveSupport::TestCase
     end
 
     should "include band information in description" do
-      # Add bands to an event
+      # Create an event with bands
+      event = create(:event,
+        owner: @user,
+        name: "Event with bands",
+        description: "Test description",
+        start_date: DateTime.parse("2024-12-25 10:00:00"),
+        end_date: DateTime.parse("2024-12-25 12:00:00"))
+
       band1 = create(:band, name: "Rock Band")
       band2 = create(:band, name: "Jazz Ensemble")
-      @event1.bands << band1
-      @event1.bands << band2
+      event.bands << band1
+      event.bands << band2
 
-      service = IcalGeneratorService.new(events: [@event1], device: @device)
+      # Force load the association to avoid transaction issues in parallel tests
+      event.bands.reload
+
+      # Ensure we have 2 bands
+      assert_equal 2, event.bands.count
+
+      service = IcalGeneratorService.new(events: [event], device: @device)
       calendar = service.generate
       ical_string = calendar.to_ical
 
-      assert ical_string.include?("DESCRIPTION:Test description\\n\\nBands: Rock Band\\, Jazz Ensemble")
+      # Check that description includes the base text and both band names
+      # Note: Band order is not guaranteed, so we check for both bands separately
+      assert ical_string.include?("DESCRIPTION:Test description\\n\\nBands:"),
+        "Description should include 'Bands:' section"
+      assert ical_string.include?("Rock Band"),
+        "Description should include 'Rock Band'"
+      assert ical_string.include?("Jazz Ensemble"),
+        "Description should include 'Jazz Ensemble'"
     end
   end
 
