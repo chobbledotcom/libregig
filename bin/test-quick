@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Run Rails tests quickly without coverage
+# Perfect for running single files or quick checks during development
+
+echo "⚡ Running tests quickly (coverage disabled)..."
+echo ""
+
+# Store the output to parse it
+# Get the script directory to find the rails binstub
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+output=$(DISABLE_SIMPLECOV=true "$SCRIPT_DIR/rails" test "$@" 2>&1)
+exit_code=$?
+
+# Display the output
+echo "$output"
+
+# Extract and highlight the final test count
+if [[ "$output" =~ ([0-9]+)\ runs,\ ([0-9]+)\ assertions,\ ([0-9]+)\ failures,\ ([0-9]+)\ errors,\ ([0-9]+)\ skips ]]; then
+    runs="${BASH_REMATCH[1]}"
+    assertions="${BASH_REMATCH[2]}"
+    failures="${BASH_REMATCH[3]}"
+    errors="${BASH_REMATCH[4]}"
+    skips="${BASH_REMATCH[5]}"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    if [ "$failures" -eq 0 ] && [ "$errors" -eq 0 ]; then
+        echo "✅ All $runs tests passed! ($assertions assertions)"
+    else
+        total_failed=$((failures + errors))
+        echo "❌ $total_failed out of $runs tests failed!"
+        [ "$failures" -gt 0 ] && echo "   Failures: $failures"
+        [ "$errors" -gt 0 ] && echo "   Errors: $errors"
+    fi
+    [ "$skips" -gt 0 ] && echo "⏸️  Skipped: $skips"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+fi
+
+exit $exit_code
