@@ -63,3 +63,6 @@ yarn-debug.log*
 .aider*
 $GEM_HOME/
 .gems/
+
+/app/assets/builds/*
+!/app/assets/builds/.keep

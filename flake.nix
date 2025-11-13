@@ -27,7 +27,6 @@
             nodejs
             imagemagick
             jq
-            tailwindcss
             # Build dependencies for native gems
             libyaml
             pkg-config

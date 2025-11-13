@@ -3,7 +3,7 @@ source "https://rubygems.org"
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
 gem "rails", "~> 8.0.1"
 
-gem "sassc-rails"
+gem "tailwindcss-rails"
 
 gem "haml-rails"
 gem "html2haml" # temporary

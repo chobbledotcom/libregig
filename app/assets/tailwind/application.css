@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   body {
@@ -198,7 +196,8 @@
   }
 
   .banner {
-    @apply min-w-16 inline-block p-4 pr-8 my-4 text-sm border animate-fade-in relative;
+    @apply min-w-16 inline-block p-4 pr-8 my-4 text-sm border relative;
+    animation: fade-in 1s ease;
     &:has(input.hidden:checked) {
       display: none;
     }
@@ -224,7 +223,8 @@
       }
     }
     &.info {
-      @apply p-4 my-4 text-sm text-sky-800 border border-sky-900 bg-sky-300 animate-fade-in;
+      @apply p-4 my-4 text-sm text-sky-800 border border-sky-900 bg-sky-300;
+      animation: fade-in 1s ease;
       a {
         @apply decoration-sky-600;
       }
@@ -351,6 +351,15 @@
 
 .animate-fade-in {
   animation: fade-in 1s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 body.admin-background {
