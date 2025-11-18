@@ -72,7 +72,7 @@ class IcalGeneratorService
     description = event.description.to_s
 
     if event.bands.any?
-      band_names = event.bands.map(&:name).join(", ")
+      band_names = event.bands.map(&:name).sort.join(", ")
       description += "\n\nBands: #{band_names}"
     end
 

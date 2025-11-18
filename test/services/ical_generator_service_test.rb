@@ -96,7 +96,8 @@ class IcalGeneratorServiceTest < ActiveSupport::TestCase
       calendar = service.generate
       ical_string = calendar.to_ical
 
-      assert ical_string.include?("DESCRIPTION:Test description\\n\\nBands: Rock Band\\, Jazz Ensemble")
+      # Bands should be sorted alphabetically
+      assert ical_string.include?("DESCRIPTION:Test description\\n\\nBands: Jazz Ensemble\\, Rock Band")
     end
   end
 
