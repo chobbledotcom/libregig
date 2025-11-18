@@ -32,4 +32,4 @@ jobs:
       run: bin/test
 
     - name: Check code standards
-      run: rake code_standards
+      run: bundle exec rake code_standards
